@@ -1,9 +1,13 @@
-
 import base64
 import hashlib
 
 from Crypto import Random
 from Crypto.Cipher import AES
+
+
+def SHA1(text):
+    hash_obj = hashlib.sha1(text.encode())
+    return hash_obj.hexdigest()
 
 
 class AESCipher(object):
@@ -12,18 +16,17 @@ class AESCipher(object):
         self.bs = 16
         self.key = hashlib.sha256(key.encode()).digest()
 
-    def encrypt(self, plaintext):
-        plaintext = self._pad(plaintext)
+    def encrypt(self, raw):
+        raw = self._pad(raw)
         iv = Random.new().read(AES.block_size)
         cipher = AES.new(self.key, AES.MODE_CBC, iv)
-        return base64.b64encode(iv + cipher.encrypt(plaintext))
+        return base64.b64encode(iv + cipher.encrypt(raw))
 
-    def decrypt(self, encrypted):
-        encrypted = base64.b64decode(encrypted)
-        iv = encrypted[:AES.block_size]
+    def decrypt(self, enc):
+        enc = base64.b64decode(enc)
+        iv = enc[:AES.block_size]
         cipher = AES.new(self.key, AES.MODE_CBC, iv)
-        return self._unpad(cipher.decrypt(encrypted[AES.block_size:]))
-
+        return self._unpad(cipher.decrypt(enc[AES.block_size:]))
 
     @staticmethod
     def _pad(self, s):
@@ -32,4 +35,3 @@ class AESCipher(object):
     @staticmethod
     def _unpad(s):
         return s[:-ord(s[len(s)-1:])]
-
