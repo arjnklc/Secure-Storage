@@ -1,5 +1,5 @@
-
+import terminal
 
 if __name__ == "__main__":
-    print("working")
+    terminal.welcome()
 

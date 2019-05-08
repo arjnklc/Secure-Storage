@@ -10,19 +10,20 @@ class Users_DB_Handler:
 
     def create_table(self):
         with self.con:
-            self.cur.execute("CREATE TABLE users(id INT, username TEXT, password text)")
+            self.cur.execute("CREATE TABLE users(id INT, username TEXT, password text, level INT)")
 
-    def add_user(self):
-        with self.con:
-            self.cur.execute("CREATE TABLE cars(id INT, name TEXT, price INT)")
+    # Add new user to the DB. Save hash of password instead of plaintext password
+    def add_user(self, username, password):
+        pass
 
     def get_user_password(self, username):
         return self.cur.execute('SELECT password FROM users WHERE username=?', username)
 
-    def get_user_role(self, username):
+    def get_user_level(self, username):
         return self.cur.execute('SELECT role FROM users WHERE username=?', username)
 
-
+    def user_exists(self, username):
+        pass
 
 
 class Files_DB_Handler:
@@ -41,13 +42,12 @@ class Files_DB_Handler:
 
         self.cur.execute("INSERT INTO files VALUES(?, ?)", file_name, file_content) # TODO
 
-    def update_file(self, new_content, file_password, file_name):
-        cipher = AESCipher(file_password)
+    def update_file(self, new_content, filename):
         cipher.encrypt(new_content)
-        self.cur.execute("UPDATE files SET content = ? WHERE filename = ?", (new_content, file_name))
+        self.cur.execute("UPDATE files SET content = ? WHERE filename = ?", (new_content, filename))
 
 
-    def get_file(self, filename):
+    def get_file_content(self, filename):
         self.cur.execute("SELECT content FROM files WHERE filename = ?", filename)
 
     def get_accessible_files(self, username):
@@ -62,6 +62,14 @@ class Files_DB_Handler:
 
         return cipher.encrypt(file_password) == key
 
+    def has_simple_property(self, filename):
+        pass  # TODO
+
+    def has_star_property(self, filename):
+        pass    # TODO
+
+    def has_strong_star_property(self, filename):
+        pass    # TODO
 
 
 
@@ -79,6 +87,12 @@ class Access_DB_Handler:
         with self.con:
             cur = self.con.cursor()
             cur.execute("CREATE TABLE cars(id INT, name TEXT, price INT)")
+
+    def has_read_permission(self, username, filename):
+        pass    # TODO
+
+    def has_write_permission(self, username, filename):
+        pass    # TODO
 
 
 class Key_DB_Handler:
