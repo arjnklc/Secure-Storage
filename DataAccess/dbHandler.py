@@ -50,6 +50,10 @@ class Files_DB_Handler:
     def get_file_content(self, filename):
         self.cur.execute("SELECT content FROM files WHERE filename = ?", filename)
 
+    def get_all_filenames(self):
+        self.cur.execute("SELECT filename FROM files")
+
+
     def get_accessible_files(self, username):
         role = Users_DB_Handler().get_user_role(username)
         self.cur.execute("SELECT filename FROM files WHERE role >= ?", role)
@@ -88,6 +92,7 @@ class Access_DB_Handler:
             cur = self.con.cursor()
             cur.execute("CREATE TABLE cars(id INT, name TEXT, price INT)")
 
+    # Özel izinler
     def has_read_permission(self, username, filename):
         pass    # TODO
 
