@@ -1,48 +1,62 @@
 import sqlite3 as lite
-from cryptutils import AESCipher
+from cryptutils import AESCipher, SHA1
 
 
 class Users_DB_Handler:
 
     def __init__(self):
-        self.con = lite.connect("")
+        self.table_name = "user"
+        self.con = lite.connect(self.table_name)
+
         self.cur = self.con.cursor()
+        self.create_table()
+
 
     def create_table(self):
         with self.con:
-            self.cur.execute("CREATE TABLE users(id INT, username TEXT, password text, level INT)")
+            self.cur.execute("CREATE TABLE if not exists user(id INT, username TEXT, password text, level INT)")
 
     # Add new user to the DB. Save hash of password instead of plaintext password
-    def add_user(self, username, password):
-        pass
+    def add_user(self, username, password, level):
+        self.cur.execute("INSERT INTO user VALUES(?, ?, ?)", (username, SHA1(password), level) )
 
     def get_user_password(self, username):
-        return self.cur.execute('SELECT password FROM users WHERE username=?', username)
+        return self.cur.execute('SELECT password FROM user WHERE username=?', username)
 
     def get_user_level(self, username):
-        return self.cur.execute('SELECT role FROM users WHERE username=?', username)
+        return self.cur.execute('SELECT role FROM user WHERE username=?', username)
 
     def user_exists(self, username):
-        pass
+        self.cur.execute("SELECT username FROM user WHERE username = ?", [username])
+        data = self.cur.fetchall()
+        return len(data) != 0
 
 
 class Files_DB_Handler:
-    def __init__(self, table_name):
-        self.con = lite.connect(table_name)
+    def __init__(self):
+        self.table_name = "file"
+        self.con = lite.connect(self.table_name)
         self.cur = self.con.cursor()
+        self.create_table()
+
+    def create_table(self):
+        with self.con:
+            self.cur.execute("CREATE TABLE  if not exists file(id INT, filename TEXT, content text, "
+                             "simple_property INT, star_property INT, strong_star_property INT)")
+
 
     def file_exists(self, filename):
         self.cur.execute("SELECT rowid FROM files WHERE filename = ?", filename)
         data = self.cur.fetchall()
         return len(data) != 0
 
-    def add_file(self, file_content, file_password, file_name):
+    def add_file(self, file_content, file_password, filename, security_properties):
         cipher = AESCipher(file_password)
         cipher.encrypt(file_content)
 
-        self.cur.execute("INSERT INTO files VALUES(?, ?)", file_name, file_content) # TODO
+        self.cur.execute("INSERT INTO files VALUES(?, ?)", filename, file_content) # TODO
 
-    def update_file(self, new_content, filename):
+    def update_file(self, new_content, filename, security_properties):
         cipher.encrypt(new_content)
         self.cur.execute("UPDATE files SET content = ? WHERE filename = ?", (new_content, filename))
 
@@ -67,42 +81,50 @@ class Files_DB_Handler:
         return cipher.encrypt(file_password) == key
 
     def has_simple_property(self, filename):
-        pass  # TODO
+        return self.cur.execute("SELECT simple_property FROM files WHERE filename = ?", filename)
+
 
     def has_star_property(self, filename):
-        pass    # TODO
+        return self.cur.execute("SELECT star_property FROM files WHERE filename = ?", filename)
 
     def has_strong_star_property(self, filename):
-        pass    # TODO
+        return self.cur.execute("SELECT strong_star_property FROM files WHERE filename = ?", filename)
 
 
 
 class Access_DB_Handler:
-    def __init__(self, table_name):
-        self.con = lite.connect(table_name)
+    def __init__(self):
+        self.table_name = "access"
+        self.con = lite.connect(self.table_name)
+        self.cur = self.con.cursor()
+        self.create_table()
+
 
     def create_table(self):
         with self.con:
             cur = self.con.cursor()
-            cur.execute("CREATE TABLE cars(id INT, name TEXT, price INT)")
+            cur.execute("CREATE TABLE  if not exists access(id INT, username TEXT, filename TEXT, permission, TEXT)")
 
 
-    def add_permission(self):
-        with self.con:
-            cur = self.con.cursor()
-            cur.execute("CREATE TABLE cars(id INT, name TEXT, price INT)")
+    def add_permission(self, username, filename, permission):
+        self.cur.execute("INSERT INTO access VALUES(?, ?, ?)", username, filename, permission)  # TODO
 
     # Özel izinler
     def has_read_permission(self, username, filename):
-        pass    # TODO
+        perm = self.cur.execute("SELECT permission FROM access WHERE filename == ? AND username == ?", filename, username)
+        return perm == "read"
 
     def has_write_permission(self, username, filename):
-        pass    # TODO
-
+        perm = self.cur.execute("SELECT permission FROM access WHERE filename == ? AND username == ?", filename, username)
+        return perm == "read"
 
 class Key_DB_Handler:
-    def __init__(self, table_name):
-        self.con = lite.connect(table_name)
+    def __init__(self):
+        self.table_name = "key"
+        self.con = lite.connect(self.table_name)
+        self.cur = self.con.cursor()
+        self.create_table()
+
 
     def create_table(self):
         with self.con:

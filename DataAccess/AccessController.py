@@ -1,6 +1,9 @@
 from DataAccess.dbHandler import *
 
 
+access_db = Access_DB_Handler()
+
+
 def has_read_permission(username, filename):
     user_level = Users_DB_Handler.get_user_level(username)
     file_level = Files_DB_Handler.get_file_level(filename)
@@ -9,7 +12,7 @@ def has_read_permission(username, filename):
     strong_star_property = Files_DB_Handler.has_strong_star_property(filename)
 
     # Special permission check
-    if Access_DB_Handler.has_read_permission(username, filename):
+    if access_db.has_read_permission(username, filename):
         return True
 
     if simple_property:
@@ -30,7 +33,7 @@ def has_write_permission(username, filename):
     strong_star_property = Files_DB_Handler.has_strong_star_property(filename)
 
     # Special permission check
-    if Access_DB_Handler.has_write_permission(username, filename):
+    if access_db.has_write_permission(username, filename):
         return True
 
     if star_property:

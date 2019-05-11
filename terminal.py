@@ -6,6 +6,8 @@ from DataAccess import AccessController
 
 
 user = ""
+files_db = Files_DB_Handler()
+users_db = Users_DB_Handler()
 
 
 def welcome():
@@ -41,19 +43,19 @@ def register():
     username = input("Select a username: ")
     password = input("Select a password: ")
     pass_again = input("Enter password again: ")
-    if Users_DB_Handler.user_exists(username):
+    if users_db.user_exists(username):
         print("User already exists. Select another username")
         return False
-    elif password == pass_again:
+    elif password != pass_again:
         print("Passwords do not match. Try again.")
         return False
     else:
-        Users_DB_Handler.add_user(username, password)
+        users_db.add_user(username, password)
         return True
 
 
 def verify_user(username, password):
-    real_password = Users_DB_Handler.get_user_password(username)
+    real_password = users_db.get_user_password(username)
     return cryptutils.SHA1(real_password) == password
 
 
@@ -85,27 +87,40 @@ def list_accessible_files():
     for file in write_files:
         print(file)
 
+def input_file_property(string):
+    inp = input(string)
+    if inp == "N" or inp == "n":
+        return False
+
+    return True
+
+def get_properties():
+    simple_property = input_file_property("Simple Security Property [y|n]")
+    star_property = input_file_property("Star Security Property [y|n]")
+    strong_star_property = input_file_property("Strong Star Security Property [y|n]")
+    return simple_property, star_property, strong_star_property
+
 
 def upload_file():
     filepath = input("path of file: ")
     filename = os.path.basename(filepath)
 
-    if Files_DB_Handler.file_exists(filename):
+    if files_db.file_exists(filename):
         if AccessController.has_write_permission(user, filename):
-            Files_DB_Handler.update_file(read_from_file(filepath), filename)
+            files_db.update_file(read_from_file(filepath), filename, get_properties())
             print("File is updated.")
         else:
             print("Filename already exists and you do NOT have write permission !")
 
     else:
-        Files_DB_Handler.add_file(read_from_file(filepath), filename)
+        files_db.add_file(read_from_file(filepath), filename, get_properties())
 
 def download_file():
     filename = input("name of the file: ")
 
-    if Files_DB_Handler.file_exists(filename):
+    if files_db.file_exists(filename):
         if AccessController.has_read_permission(user, filename):
-            file_content = Files_DB_Handler.get_file_content(filename)
+            file_content = files_db.get_file_content(filename)
             write_to_file(file_content, filename)
         else:
             print("You do NOT have read permission !")
