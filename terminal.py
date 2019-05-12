@@ -6,8 +6,10 @@ from DataAccess import AccessController
 
 
 user = ""
-files_db = Files_DB_Handler()
-users_db = Users_DB_Handler()
+connection = ConnectionProvider()
+files_db = Files_DB_Handler(connection.connection)
+users_db = Users_DB_Handler(connection.connection)
+access_db = Access_DB_Handler(connection.connection)
 
 
 def welcome():
@@ -25,7 +27,8 @@ def welcome():
         if register():
             print("Registration Successful. Please login to the system.")
         else:
-            welcome()
+            print("Registration Unsuccessful. Try Again.")
+        welcome()
     else:
         print("Wrong choice! ")
         welcome()
@@ -43,6 +46,7 @@ def register():
     username = input("Select a username: ")
     password = input("Select a password: ")
     pass_again = input("Enter password again: ")
+    level= input("Enter level(1-5): ")
     if users_db.user_exists(username):
         print("User already exists. Select another username")
         return False
@@ -50,13 +54,13 @@ def register():
         print("Passwords do not match. Try again.")
         return False
     else:
-        users_db.add_user(username, password)
+        id = users_db.add_user(username, password, level)
         return True
 
 
 def verify_user(username, password):
     real_password = users_db.get_user_password(username)
-    return cryptutils.SHA1(real_password) == password
+    return cryptutils.SHA1(password) == real_password
 
 
 def terminal():
@@ -78,12 +82,12 @@ def terminal():
 
 def list_accessible_files():
     print("Files you can read: ")
-    read_files = AccessController.get_readable_files(user)
+    read_files = AccessController.get_readable_files(user, users_db, files_db, access_db)
     for file in read_files:
         print(file)
 
     print("Files you can write: ")
-    write_files = AccessController.get_writeable_files(user)
+    write_files = AccessController.get_writeable_files(user, users_db, files_db, access_db)
     for file in write_files:
         print(file)
 
@@ -106,7 +110,7 @@ def upload_file():
     filename = os.path.basename(filepath)
 
     if files_db.file_exists(filename):
-        if AccessController.has_write_permission(user, filename):
+        if AccessController.has_write_permission(user, filename, users_db, files_db, access_db):
             files_db.update_file(read_from_file(filepath), filename, get_properties())
             print("File is updated.")
         else:
@@ -119,7 +123,7 @@ def download_file():
     filename = input("name of the file: ")
 
     if files_db.file_exists(filename):
-        if AccessController.has_read_permission(user, filename):
+        if AccessController.has_read_permission(user, filename, users_db, files_db, access_db):
             file_content = files_db.get_file_content(filename)
             write_to_file(file_content, filename)
         else:

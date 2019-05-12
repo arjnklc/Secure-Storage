@@ -31,7 +31,7 @@ class Users_DB_Handler:
                                                     id integer PRIMARY KEY,
                                                     username text NOT NULL,
                                                     password text NOT NULL,
-                                                    level integer
+                                                    accesslevel integer
                                                 ); """
             try:
                 with self.con:
@@ -47,10 +47,12 @@ class Users_DB_Handler:
         if user_exists:
             print("An error occurred during user registration")
             return
-        user = (username, SHA1(password), level)
-        sql = ''' INSERT INTO users(username,password,level)
+        passwordSHA = SHA1(password)
+        user = (username, passwordSHA, level)
+        sql = ''' INSERT INTO users(username,password,accesslevel)
                       VALUES(?,?,?) '''
         self.cur.execute(sql, user)
+        self.con.commit()
         return self.cur.lastrowid
 
     def get_user_password(self, username):
@@ -106,29 +108,38 @@ class Files_DB_Handler:
         else:
             return False
 
-    #TODO security properties will be talked
-    def add_file(self, file_content, file_password, file_name, level, security_property):
-        cipher = AESCipher(file_password)
+    def add_file(self, file_content, file_name, level, simple_property, star_property, strong_star_property):
+        key_db = Key_DB_Handler(self.con)
+        system_key = key_db.get_system_key()
+        cipher = AESCipher(system_key)
         encrypted_content = cipher.encrypt(file_content)
 
-        file = (file_name, encrypted_content, level, security_property)
-        sql = ''' INSERT INTO files(filename,content,level,security_property)
-                              VALUES(?,?,?,?) '''
+        file = (file_name, encrypted_content, level, simple_property, star_property, strong_star_property)
+        sql = ''' INSERT INTO files(filename,content,level,simple_property,star_property,strong_star_property))
+                              VALUES(?,?,?,?,?,?) '''
         self.cur.execute(sql, file)
+        self.con.commit()
         return self.cur.lastrowid
 
-    def update_file(self, new_content, file_name, file_password, security_properties):
+    def update_file(self, new_content, file_name):
+        key_db = Key_DB_Handler(self.con)
+        system_key = key_db.get_system_key()
         sql = ''' UPDATE tasks
                       SET content = ? 
                       WHERE filename = ?'''
-        cipher = AESCipher(file_password)
+        cipher = AESCipher(system_key)
         encrypted_content = cipher.encrypt(new_content)
         self.cur.execute(sql, (encrypted_content, file_name))
+        self.con.commit()
 
     def get_file_content(self, file_name):
         self.cur.execute("SELECT content FROM files WHERE filename=?", (file_name,))
         content = self.cur.fetchone()
-        return content[0]
+        key_db = Key_DB_Handler(self.con)
+        system_key = key_db.get_system_key()
+        cipher = AESCipher(system_key)
+        decrypted_content = cipher.decrypt(content[0])
+        return decrypted_content
 
     def get_all_file_names(self):
         self.cur.execute("select filename from files")
@@ -141,29 +152,20 @@ class Files_DB_Handler:
         files = self.cur.fetchall()
         return list(files)
 
-    # Talk about this
-    def validate_password(self, filename, file_password):
-        # TODO get system pass from DB
-        cipher = AESCipher(Key_DB_Handler(self.con).get_system_key())  # TODO
-
-        key = self.cur.execute("SELECT key FROM files WHERE filename >= ?", filename)
-
-        return cipher.encrypt(file_password) == key
-
     def has_simple_property(self, file_name):
-        self.cur.execute("SELECT property FROM files WHERE filename=?", (file_name,))
+        self.cur.execute("SELECT simple_property FROM files WHERE filename=?", (file_name,))
         file_property = self.cur.fetchone()
-        #return file_property[0] == File_Property.simple.value
+        return file_property[0] == 1
 
     def has_star_property(self, file_name):
-        self.cur.execute("SELECT property FROM files WHERE filename=?", (file_name,))
+        self.cur.execute("SELECT star_property FROM files WHERE filename=?", (file_name,))
         file_property = self.cur.fetchone()
-        #return file_property[0] == File_Property.star.value
+        return file_property[0] == 1
 
     def has_strong_star_property(self, file_name):
-        self.cur.execute("SELECT property FROM files WHERE filename=?", (file_name,))
+        self.cur.execute("SELECT strong_star_property FROM files WHERE filename=?", (file_name,))
         file_property = self.cur.fetchone()
-        #return file_property[0] == File_Property.strong_star.value
+        return file_property[0] == 1
 
 
 class Access_DB_Handler:
@@ -194,6 +196,7 @@ class Access_DB_Handler:
         sql = ''' INSERT INTO access(username, filename, permission)
                               VALUES(?,?,?) '''
         self.cur.execute(sql, access)
+        self.con.commit()
         return self.cur.lastrowid
 
     # Özel izinler
@@ -216,17 +219,20 @@ class Key_DB_Handler:
         self.create_table()
 
     def create_table(self):
-        with self.con:
-            cur = self.con.cursor()
-            cur.execute("CREATE TABLE key(id INT, name TEXT, price INT)")
-
-    def add_permission(self):
-        with self.con:
-            cur = self.con.cursor()
-            cur.execute("CREATE TABLE cars(id INT, name TEXT, price INT)")
-
-    def get_file_key(self, filename):
-        return self.cur.execute("SELECT key FROM files WHERE filename = ?", filename)
+        if self.con is not None:
+            sql_create_key_table = """ CREATE TABLE IF NOT EXISTS key (
+                                                    id integer PRIMARY KEY,
+                                                    key text
+                                                ); """
+            try:
+                with self.con:
+                    self.cur.execute(sql_create_key_table)
+            except lite.Error as e:
+                print(e)
+        else:
+            print("Error! cannot create the database connection.")
 
     def get_system_key(self):
-        return self.get_file_key("system")
+        self.cur.execute("SELECT key FROM access")
+        key = self.cur.fetchone()
+        return key[0]
