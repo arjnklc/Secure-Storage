@@ -42,9 +42,9 @@ def has_write_permission(username, filename, users_db, files_db, access_db):
 def get_readable_files(username, users_db, files_db, access_db):
     readable_files = []
 
-    for filename in files_db.get_all_filenames():
-        if has_read_permission(username, filename):
-            readable_files.append(filename)
+    for filename in files_db.get_all_file_names():
+        if has_read_permission(username, filename[0], users_db, files_db, access_db):
+            readable_files.append(filename[0])
 
     return readable_files
 
@@ -52,9 +52,9 @@ def get_readable_files(username, users_db, files_db, access_db):
 def get_writeable_files(username, users_db, files_db, access_db):
     writeable_files = []
 
-    for filename in files_db.get_all_filenames():
-        if has_write_permission(username, filename):
-            writeable_files.append(filename)
+    for filename in files_db.get_all_file_names():
+        if has_write_permission(username, filename[0], users_db, files_db, access_db):
+            writeable_files.append(filename[0])
 
     return writeable_files
 

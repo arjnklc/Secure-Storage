@@ -12,6 +12,25 @@ users_db = Users_DB_Handler(connection.connection)
 access_db = Access_DB_Handler(connection.connection)
 
 
+# Take base64 and write binary
+def write_to_file(file_content, filename):
+    with open(filename, 'wb') as f:
+        f.write(base64.b64decode(file_content))
+
+
+# Take base64 and write binary
+def read_from_file(filepath):
+    with open(filepath, 'rb') as f:
+        return base64.b64encode(f.read())
+
+
+def print_help_banner():
+    print("Please select: ")
+    print("[1] List Accessible Files")
+    print("[2] Download File")
+    print("[3] Upload File")
+    print("[Q] Quit")
+
 def welcome():
     print("Welcome to Secure Storage. ")
     print("Enter 1 for login, 2 for registration")
@@ -63,6 +82,21 @@ def verify_user(username, password):
     return cryptutils.SHA1(password) == real_password
 
 
+def download_file():
+    filename = input("name of the file: ")
+
+    if files_db.file_exists(filename):
+        if AccessController.has_read_permission(user, filename, users_db, files_db, access_db):
+            file_content = files_db.get_file_content(filename)
+            write_to_file(file_content, filename)
+        else:
+            print("You do NOT have read permission !")
+
+    else:
+        print("There is no file with this name")
+
+
+
 def terminal():
     print_help_banner()
     choice = input("> ")
@@ -111,44 +145,13 @@ def upload_file():
 
     if files_db.file_exists(filename):
         if AccessController.has_write_permission(user, filename, users_db, files_db, access_db):
-            files_db.update_file(read_from_file(filepath), filename, get_properties())
+            files_db.update_file(read_from_file(filepath), filename)
             print("File is updated.")
         else:
             print("Filename already exists and you do NOT have write permission !")
 
     else:
-        files_db.add_file(read_from_file(filepath), filename, get_properties())
-
-def download_file():
-    filename = input("name of the file: ")
-
-    if files_db.file_exists(filename):
-        if AccessController.has_read_permission(user, filename, users_db, files_db, access_db):
-            file_content = files_db.get_file_content(filename)
-            write_to_file(file_content, filename)
-        else:
-            print("You do NOT have read permission !")
-
-    else:
-        print("There is no file with this name")
+        files_db.add_file(read_from_file(filepath), filename, users_db.get_user_level(user), get_properties())
 
 
-# Take base64 and write binary
-def write_to_file(file_content, filename):
-    with open(filename, 'wb') as f:
-        f.write(base64.b64decode(file_content))
-
-
-# Take base64 and write binary
-def read_from_file(filepath):
-    with open(filepath, 'rb') as f:
-        return base64.b64decode(f.read())
-
-
-def print_help_banner():
-    print("Please select: ")
-    print("[1] List Accessible Files")
-    print("[2] Download File")
-    print("[3] Upload File")
-    print("[Q] Quit")
 
