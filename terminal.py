@@ -21,7 +21,7 @@ def write_to_file(file_content, filename):
 # Take base64 and write binary
 def read_from_file(filepath):
     with open(filepath, 'rb') as f:
-        return base64.b64encode(f.read())
+        return base64.b64encode(f.read()).decode("utf-8")
 
 
 def print_help_banner():
@@ -73,7 +73,7 @@ def register():
         print("Passwords do not match. Try again.")
         return False
     else:
-        id = users_db.add_user(username, password, level)
+        users_db.add_user(username, password, level)
         return True
 
 
